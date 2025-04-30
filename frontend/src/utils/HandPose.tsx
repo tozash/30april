@@ -1,0 +1,258 @@
+import * as handpose from "@tensorflow-models/handpose";
+import "@tensorflow/tfjs-backend-webgl";
+
+// Types
+export type HandPose = "thumbs_up" | "thumbs_down" | "flat_hand" | "ok_sign" | "index_extended" | "index_middle_extended" | null;
+export type Landmark = [number, number];
+export type Landmarks = Landmark[];
+
+// Load the handpose model
+export const loadHandposeModel = async (): Promise<any> => {
+  try {
+    const model = await handpose.load();
+    console.log("Handpose model loaded successfully");
+    return model;
+  } catch (err) {
+    console.error("Failed to load handpose model:", err);
+    throw new Error("Could not load hand pose detection model");
+  }
+};
+
+// Detect hand pose from landmarks
+export const detectHandPoseFromLandmarks = (landmarks: Landmarks): HandPose => {
+  if (!landmarks || landmarks.length < 21) return null;
+
+  try {
+    // Get key points
+    const thumbTip = landmarks[4];
+    const thumbBase = landmarks[2];
+    const indexTip = landmarks[8];
+    const middleTip = landmarks[12];
+    const ringTip = landmarks[16];
+    const pinkyTip = landmarks[20];
+    const wrist = landmarks[0];
+
+    // Validate key points
+    if (
+      !thumbTip ||
+      !thumbBase ||
+      !indexTip ||
+      !middleTip ||
+      !ringTip ||
+      !pinkyTip ||
+      !wrist
+    ) {
+      return null;
+    }
+
+    // Calculate finger extensions
+    const thumbExtended = isFingerExtended(thumbTip, thumbBase, wrist);
+    const indexExtended = isFingerExtended(indexTip, landmarks[6], wrist);
+    const middleExtended = isFingerExtended(middleTip, landmarks[10], wrist);
+    const ringExtended = isFingerExtended(ringTip, landmarks[14], wrist);
+    const pinkyExtended = isFingerExtended(pinkyTip, landmarks[18], wrist);
+
+    // Check for thumb down specifically
+    const isThumbDown = isThumbPointingDown(thumbTip, thumbBase, wrist);
+
+    // Check for OK sign (thumb and index finger tips are close)
+    const isOKSign = isOKSignDetected(thumbTip, indexTip);
+
+    // Detect poses
+    // OK sign (thumb and index finger tips are close)
+    if (isOKSign) {
+      return "ok_sign";
+    }
+
+    // Only index and middle fingers extended
+    if (
+      !thumbExtended &&
+      indexExtended &&
+      middleExtended &&
+      !ringExtended &&
+      !pinkyExtended
+    ) {
+      return "index_middle_extended";
+    }
+
+    // Only index finger extended
+    if (
+      indexExtended &&
+      !middleExtended &&
+      !ringExtended &&
+      !pinkyExtended
+    ) {
+      return "index_extended";
+    }
+
+    // Thumbs up (only thumb extended)
+    if (
+      thumbExtended &&
+      !indexExtended &&
+      !middleExtended &&
+      !ringExtended &&
+      !pinkyExtended &&
+      !isThumbDown
+    ) {
+      return "thumbs_up";
+    }
+
+    // Thumbs down (thumb pointing down)
+    if (isThumbDown) {
+      return "thumbs_down";
+    }
+
+    // Flat hand (all fingers extended)
+    if (
+      thumbExtended &&
+      indexExtended &&
+      middleExtended &&
+      ringExtended &&
+      pinkyExtended
+    ) {
+      return "flat_hand";
+    }
+  } catch (err) {
+    console.error("Error in detectHandPoseFromLandmarks:", err);
+  }
+
+  return null;
+};
+
+// Helper function to determine if a finger is extended
+const isFingerExtended = (
+  tip: Landmark,
+  middle: Landmark,
+  wrist: Landmark
+): boolean => {
+  try {
+    // Calculate vectors
+    const fingerVector = [tip[0] - middle[0], tip[1] - middle[1]];
+    const palmVector = [middle[0] - wrist[0], middle[1] - wrist[1]];
+
+    // Calculate dot product
+    const dotProduct =
+      fingerVector[0] * palmVector[0] + fingerVector[1] * palmVector[1];
+
+    // Calculate magnitudes
+    const fingerMagnitude = Math.sqrt(
+      fingerVector[0] * fingerVector[0] + fingerVector[1] * fingerVector[1]
+    );
+    const palmMagnitude = Math.sqrt(
+      palmVector[0] * palmVector[0] + palmVector[1] * palmVector[1]
+    );
+
+    // Avoid division by zero
+    if (fingerMagnitude === 0 || palmMagnitude === 0) {
+      return false;
+    }
+
+    // Calculate angle
+    const angle = Math.acos(dotProduct / (fingerMagnitude * palmMagnitude));
+
+    // For index finger, we want a more natural extension
+    // Check if the finger is pointing upward (lower y value in image coordinates)
+    const isPointingUp = tip[1] < middle[1];
+
+    // Calculate the vertical distance between tip and base
+    const verticalDistance = Math.abs(tip[1] - wrist[1]);
+
+    // Calculate the horizontal distance between tip and base
+    const horizontalDistance = Math.abs(tip[0] - wrist[0]);
+
+    // For index finger, we want:
+    // 1. Angle less than 90 degrees (pointing up)
+    // 2. Vertical distance greater than horizontal distance (pointing up)
+    // 3. Finger tip is above the middle joint (pointing up)
+    return (
+      angle < Math.PI / 2 && // Less than 90 degrees
+      verticalDistance > horizontalDistance && // More vertical than horizontal
+      isPointingUp // Tip is above the middle joint
+    );
+  } catch (err) {
+    console.error("Error in isFingerExtended:", err);
+    return false;
+  }
+};
+
+// Helper function to determine if thumb is pointing down
+const isThumbPointingDown = (
+  thumbTip: Landmark,
+  thumbBase: Landmark,
+  wrist: Landmark
+): boolean => {
+  try {
+    // Method 1: Angle-based detection
+    // Calculate the vector from wrist to thumb base
+    const wristToBaseVector = [
+      thumbBase[0] - wrist[0],
+      thumbBase[1] - wrist[1],
+    ];
+
+    // Calculate the vector from thumb base to thumb tip
+    const baseToTipVector = [
+      thumbTip[0] - thumbBase[0],
+      thumbTip[1] - thumbBase[1],
+    ];
+
+    // Calculate dot product
+    const dotProduct =
+      wristToBaseVector[0] * baseToTipVector[0] +
+      wristToBaseVector[1] * baseToTipVector[1];
+
+    // Calculate magnitudes
+    const wristToBaseMagnitude = Math.sqrt(
+      wristToBaseVector[0] * wristToBaseVector[0] +
+        wristToBaseVector[1] * wristToBaseVector[1]
+    );
+    const baseToTipMagnitude = Math.sqrt(
+      baseToTipVector[0] * baseToTipVector[0] +
+        baseToTipVector[1] * baseToTipVector[1]
+    );
+
+    // Avoid division by zero
+    if (wristToBaseMagnitude === 0 || baseToTipMagnitude === 0) {
+      return false;
+    }
+
+    // Calculate angle
+    const angle = Math.acos(
+      dotProduct / (wristToBaseMagnitude * baseToTipMagnitude)
+    );
+
+    // Method 2: Position-based detection
+    // Check if thumb tip is below the wrist (higher y value in image coordinates)
+    const isThumbBelowWrist = thumbTip[1] > wrist[1];
+
+    // Method 3: Vertical movement detection
+    // Check if thumb is pointing downward by comparing y-coordinates
+    const thumbPointingDownward = thumbTip[1] > thumbBase[1];
+
+    // Combine all methods for more robust detection
+    // Thumb is pointing down if:
+    // 1. The angle is greater than 100 degrees OR
+    // 2. The thumb tip is below the wrist AND the thumb is pointing downward
+    return (
+      angle > (5 * Math.PI) / 9 || (isThumbBelowWrist && thumbPointingDownward)
+    );
+  } catch (err) {
+    console.error("Error in isThumbPointingDown:", err);
+    return false;
+  }
+};
+
+// Helper function to determine if thumb and index finger tips are close (OK sign)
+const isOKSignDetected = (thumbTip: Landmark, indexTip: Landmark): boolean => {
+  try {
+    // Calculate distance between thumb tip and index tip
+    const dx = thumbTip[0] - indexTip[0];
+    const dy = thumbTip[1] - indexTip[1];
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    // If distance is less than 50 pixels, consider it an OK sign
+    return distance < 50;
+  } catch (err) {
+    console.error("Error in isOKSignDetected:", err);
+    return false;
+  }
+};
