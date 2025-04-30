@@ -2,7 +2,6 @@
 import * as React from "react";
 import { useState } from "react";
 import Header from "./Header";
-import ProgressBar from "./ProgressBar";
 import Flashcard from "./Flashcard";
 import ActionButtons from "./ActionButtons";
 import CompletionScreen from "./CompletionScreen";
