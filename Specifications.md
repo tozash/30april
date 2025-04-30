@@ -78,3 +78,4 @@ See [§12 Glossary](#12-glossary).
 
 ## 5. System Architecture
 
+Backend uses node.js + typescript + fastify and connects to Firebase for storing and retrieving flashcards
