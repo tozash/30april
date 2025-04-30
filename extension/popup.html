@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Add Flashcard</title>
+
+  <!-- Tailwind CDN (fine for an extension popup) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    /* optional extra styles */
+    body { @apply bg-slate-50; }
+    .popup-container { @apply bg-white p-5 w-[360px] rounded-lg shadow-lg mx-auto my-4; }
+    label { @apply block text-sm font-medium text-gray-700 mb-1; }
+    input, textarea { @apply w-full border rounded px-2 py-1 mb-3 shadow-inner; }
+    button { @apply w-full bg-orange-500 hover:bg-orange-600 text-white py-2 rounded mt-2; }
+  </style>
+</head>
+<body>
+  <main class="popup-container">
+    <h1 class="text-xl font-bold mb-4 text-center text-gray-800">Add Flashcard</h1>
+
+    <!-- Front side -->
+    <label for="front-input">Front<span class="text-red-500">*</span></label>
+    <input id="front-input" type="text" placeholder="Prompt / Question" required />
+
+    <!-- Back side -->
+    <label for="back-input">Back</label>
+    <textarea id="back-input" rows="3" placeholder="Selected text appears here"></textarea>
+
+    <!-- Hint -->
+    <label for="hint-input">Hint (optional)</label>
+    <input id="hint-input" type="text" placeholder="Memory aid…" />
+
+    <!-- Tags -->
+    <label for="tags-input">Tags (comma-separated, optional)</label>
+    <input id="tags-input" type="text" placeholder="e.g. biology, chapter-3" />
+
+    <button id="save-btn">Save</button>
+  </main>
+
+  <!-- Prefill & placeholder save handler -->
+  <script type="module">
+    // 1. Prefill "Back" from query string
+    const params = new URLSearchParams(location.search);
+    const backText = decodeURIComponent(params.get('back') ?? '');
+    const backEl = /** @type {HTMLTextAreaElement} */ (
+      document.getElementById('back-input')
+    );
+    backEl.value = backText;
+
+    // 2. Simple Save stub (replace with real POST later)
+    document.getElementById('save-btn').addEventListener('click', () => {
+      const payload = {
+        front: document.getElementById('front-input').value.trim(),
+        back : document.getElementById('back-input').value.trim(),
+        hint : document.getElementById('hint-input').value.trim() || undefined,
+        tags : (document.getElementById('tags-input').value || '')
+          .split(',')
+          .map(t => t.trim())
+          .filter(Boolean),
+      };
+
+      if (!payload.front || !payload.back) {
+        alert('Front and Back are required.');
+        return;
+      }
+
+      console.log('[Flashcard] ready to POST:', payload);
+      // TODO: replace console.log with fetch('http://localhost:3000/flashcards', …)
+
+      // Optional UX: close popup immediately
+      window.close();
+    });
+
+    // Focus the Front field for quick typing
+    document.getElementById('front-input').focus();
+  </script>
+</body>
+</html>

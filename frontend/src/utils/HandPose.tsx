@@ -32,10 +32,6 @@ export const detectHandPoseFromLandmarks = (landmarks: Landmarks): HandPose => {
     const pinkyTip = landmarks[20];
     const wrist = landmarks[0];
 
-    // Print thumb and index fingertip coordinates
-    console.log('Thumb Tip Coordinates:', thumbTip);
-    console.log('Index Tip Coordinates:', indexTip);
-
     // Validate key points
     if (
       !thumbTip ||
@@ -81,7 +77,6 @@ export const detectHandPoseFromLandmarks = (landmarks: Landmarks): HandPose => {
 
     // Only index finger extended
     if (
-      !thumbExtended &&
       indexExtended &&
       !middleExtended &&
       !ringExtended &&
@@ -131,7 +126,7 @@ const isFingerExtended = (
   wrist: Landmark
 ): boolean => {
   try {
-    // Calculate the angle between the finger and the palm
+    // Calculate vectors
     const fingerVector = [tip[0] - middle[0], tip[1] - middle[1]];
     const palmVector = [middle[0] - wrist[0], middle[1] - wrist[1]];
 
@@ -155,8 +150,25 @@ const isFingerExtended = (
     // Calculate angle
     const angle = Math.acos(dotProduct / (fingerMagnitude * palmMagnitude));
 
-    // Finger is extended if angle is less than 90 degrees
-    return angle < Math.PI / 2;
+    // For index finger, we want a more natural extension
+    // Check if the finger is pointing upward (lower y value in image coordinates)
+    const isPointingUp = tip[1] < middle[1];
+
+    // Calculate the vertical distance between tip and base
+    const verticalDistance = Math.abs(tip[1] - wrist[1]);
+
+    // Calculate the horizontal distance between tip and base
+    const horizontalDistance = Math.abs(tip[0] - wrist[0]);
+
+    // For index finger, we want:
+    // 1. Angle less than 90 degrees (pointing up)
+    // 2. Vertical distance greater than horizontal distance (pointing up)
+    // 3. Finger tip is above the middle joint (pointing up)
+    return (
+      angle < Math.PI / 2 && // Less than 90 degrees
+      verticalDistance > horizontalDistance && // More vertical than horizontal
+      isPointingUp // Tip is above the middle joint
+    );
   } catch (err) {
     console.error("Error in isFingerExtended:", err);
     return false;
