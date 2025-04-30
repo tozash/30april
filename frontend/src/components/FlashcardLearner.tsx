@@ -4,6 +4,7 @@ import Header from './Header';
 import Flashcard from './Flashcard';
 import ActionButtons from './ActionButtons';
 import CompletionScreen from './CompletionScreen';
+import HandVisualizer from './HandVisualizer';
 
 const FlashcardLearner: React.FC = () => {
   const [currentCard, setCurrentCard] = useState(1);
@@ -81,6 +82,9 @@ const FlashcardLearner: React.FC = () => {
       />
 
       <div className="flex flex-col gap-8 items-center px-4 py-8 mx-auto w-full max-w-[950px]">
+      <div className="w-full">
+          <HandVisualizer />
+        </div>
         {!showComplete ? (
           <>
             <Flashcard
