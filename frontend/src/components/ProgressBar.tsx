@@ -9,16 +9,14 @@ const ProgressBar: React.FC<ProgressBarProps> = ({
   currentCard,
   totalCards,
 }) => {
-  const progressPercentage = ((currentCard - 1) / totalCards) * 100;
+  const progressPercentage = (currentCard / totalCards) * 100;
 
   return (
     <div className="w-full">
       <div className="overflow-hidden w-full h-1 bg-gray-200 rounded-full">
         <div
           className="h-1 bg-indigo-600 rounded-full transition-all duration-300 ease-out ease-in-out"
-          style={{
-            width: `${progressPercentage}%`,
-          }}
+          style={{ width: `${Math.min(progressPercentage, 100)}%` }}
         />
       </div>
       <div className="py-2 text-sm font-medium leading-5 text-gray-500">

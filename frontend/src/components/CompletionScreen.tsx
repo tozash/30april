@@ -4,9 +4,12 @@ import { useState } from "react";
 
 interface CompletionScreenProps {
   onNextDay: () => void;
+  easy:number;
+  hard:number;
+  wrong:number;
 }
 
-const CompletionScreen: React.FC<CompletionScreenProps> = ({ onNextDay }) => {
+const CompletionScreen: React.FC<CompletionScreenProps> = ({ onNextDay,easy,hard,wrong }) => {
   const [buttonHover, setButtonHover] = useState(false);
 
   return (
@@ -16,15 +19,15 @@ const CompletionScreen: React.FC<CompletionScreenProps> = ({ onNextDay }) => {
       </h2>
       <div className="flex gap-8 justify-center mb-8">
         <div className="text-center">
-          <div className="font-bold text-emerald-500">6</div>
+          <div className="font-bold text-emerald-500">{easy}</div>
           <div className="text-sm leading-5 text-gray-500">Easy</div>
         </div>
         <div className="text-center">
-          <div className="font-bold text-amber-500">0</div>
+          <div className="font-bold text-amber-500">{hard}</div>
           <div className="text-sm leading-5 text-gray-500">Hard</div>
         </div>
         <div className="text-center">
-          <div className="font-bold text-red-500">0</div>
+          <div className="font-bold text-red-500">{wrong}</div>
           <div className="text-sm leading-5 text-gray-500">Wrong</div>
         </div>
       </div>

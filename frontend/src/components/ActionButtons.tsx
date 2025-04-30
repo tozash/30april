@@ -7,7 +7,7 @@ interface ActionButtonsProps {
   showHint: boolean;
   setShowHint: React.Dispatch<React.SetStateAction<boolean>>;
   handleShowAnswer: () => void;
-  handleRateCard: () => void;
+  handleRateCard: (label: string) => void;
 }
 
 const ActionButtons: React.FC<ActionButtonsProps> = ({
@@ -25,7 +25,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
     easy: false,
   });
 
-  const handleHoverChange = (button: string, isHovering: boolean) => {
+  const handleHoverChange = (button: keyof typeof buttonHover, isHovering: boolean) => {
     setButtonHover((prev) => ({
       ...prev,
       [button]: isHovering,
@@ -40,17 +40,13 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
             showHint={showHint}
             setShowHint={setShowHint}
             isHovering={buttonHover.hint}
-            onHoverChange={(isHovering) =>
-              handleHoverChange("hint", isHovering)
-            }
+            onHoverChange={(isHovering) => handleHoverChange("hint", isHovering)}
           />
 
           <ShowAnswerButton
             handleShowAnswer={handleShowAnswer}
             isHovering={buttonHover.answer}
-            onHoverChange={(isHovering) =>
-              handleHoverChange("answer", isHovering)
-            }
+            onHoverChange={(isHovering) => handleHoverChange("answer", isHovering)}
           />
         </div>
       ) : (
@@ -63,11 +59,9 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
               label="Wrong"
               emoji="👎"
               color="red"
-              handleRateCard={handleRateCard}
+              handleRateCard={() => handleRateCard("Wrong")}
               isHovering={buttonHover.wrong}
-              onHoverChange={(isHovering) =>
-                handleHoverChange("wrong", isHovering)
-              }
+              onHoverChange={(isHovering) => handleHoverChange("wrong", isHovering)}
               description="Thumbs down gesture"
             />
 
@@ -75,11 +69,9 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
               label="Hard"
               emoji="✋"
               color="amber"
-              handleRateCard={handleRateCard}
+              handleRateCard={() => handleRateCard("Hard")}
               isHovering={buttonHover.hard}
-              onHoverChange={(isHovering) =>
-                handleHoverChange("hard", isHovering)
-              }
+              onHoverChange={(isHovering) => handleHoverChange("hard", isHovering)}
               description="Palm forward gesture"
             />
 
@@ -87,11 +79,9 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
               label="Easy"
               emoji="👍"
               color="emerald"
-              handleRateCard={handleRateCard}
+              handleRateCard={() => handleRateCard("Easy")}
               isHovering={buttonHover.easy}
-              onHoverChange={(isHovering) =>
-                handleHoverChange("easy", isHovering)
-              }
+              onHoverChange={(isHovering) => handleHoverChange("easy", isHovering)}
               description="Thumbs up gesture"
             />
           </div>
@@ -116,31 +106,29 @@ const HintButton: React.FC<HintButtonProps> = ({
   setShowHint,
   isHovering,
   onHoverChange,
-}) => {
-  return (
-    <div className="flex flex-col items-center">
-      <button
-        className="flex gap-2 items-center px-8 py-4 font-medium text-white bg-gray-900 rounded-lg transition-all duration-200 ease-in-out shadow-[0px_1px_2px_rgba(0,0,0,0.05)]"
-        onClick={() => setShowHint(!showHint)}
-        onMouseEnter={() => onHoverChange(true)}
-        onMouseLeave={() => onHoverChange(false)}
-        style={{
-          background: isHovering ? "#1F2937" : "#111827",
-          transform: isHovering ? "translateY(-1px)" : undefined,
-          boxShadow: isHovering
-            ? "0px 4px 6px rgba(0,0,0,0.05)"
-            : "0px 1px 2px rgba(0,0,0,0.05)",
-        }}
-      >
-        <span>☝️</span>
-        <span>Get Hint</span>
-      </button>
-      <span className="mt-2 text-sm leading-5 text-gray-500">
-        Index finger up gesture
-      </span>
-    </div>
-  );
-};
+}) => (
+  <div className="flex flex-col items-center">
+    <button
+      onClick={() => setShowHint(!showHint)}
+      onMouseEnter={() => onHoverChange(true)}
+      onMouseLeave={() => onHoverChange(false)}
+      className="flex gap-2 items-center px-8 py-4 font-medium text-white rounded-lg transition-all duration-200 ease-in-out"
+      style={{
+        background: isHovering ? "#1F2937" : "#111827",
+        transform: isHovering ? "translateY(-1px)" : undefined,
+        boxShadow: isHovering
+          ? "0px 4px 6px rgba(0,0,0,0.05)"
+          : "0px 1px 2px rgba(0,0,0,0.05)",
+      }}
+    >
+      <span>☝️</span>
+      <span>Get Hint</span>
+    </button>
+    <span className="mt-2 text-sm leading-5 text-gray-500">
+      Index finger up gesture
+    </span>
+  </div>
+);
 
 interface ShowAnswerButtonProps extends ButtonProps {
   handleShowAnswer: () => void;
@@ -150,36 +138,34 @@ const ShowAnswerButton: React.FC<ShowAnswerButtonProps> = ({
   handleShowAnswer,
   isHovering,
   onHoverChange,
-}) => {
-  return (
-    <div className="flex flex-col items-center">
-      <button
-        className="flex gap-2 items-center px-8 py-4 font-medium text-white bg-indigo-600 rounded-lg transition-all duration-200 ease-in-out shadow-[0px_1px_2px_rgba(79,70,229,0.05)]"
-        onClick={handleShowAnswer}
-        onMouseEnter={() => onHoverChange(true)}
-        onMouseLeave={() => onHoverChange(false)}
-        style={{
-          background: isHovering ? "#4338CA" : "#4F46E5",
-          transform: isHovering ? "translateY(-1px)" : undefined,
-          boxShadow: isHovering
-            ? "0px 4px 6px rgba(79,70,229,0.05)"
-            : "0px 1px 2px rgba(79,70,229,0.05)",
-        }}
-      >
-        <span>✌️</span>
-        <span> Show Answer</span>
-      </button>
-      <span className="mt-2 text-sm leading-5 text-gray-500">
-        Two fingers up gesture
-      </span>
-    </div>
-  );
-};
+}) => (
+  <div className="flex flex-col items-center">
+    <button
+      onClick={handleShowAnswer}
+      onMouseEnter={() => onHoverChange(true)}
+      onMouseLeave={() => onHoverChange(false)}
+      className="flex gap-2 items-center px-8 py-4 font-medium text-white rounded-lg transition-all duration-200 ease-in-out"
+      style={{
+        background: isHovering ? "#4338CA" : "#4F46E5",
+        transform: isHovering ? "translateY(-1px)" : undefined,
+        boxShadow: isHovering
+          ? "0px 4px 6px rgba(79,70,229,0.05)"
+          : "0px 1px 2px rgba(79,70,229,0.05)",
+      }}
+    >
+      <span>✌️</span>
+      <span>Show Answer</span>
+    </button>
+    <span className="mt-2 text-sm leading-5 text-gray-500">
+      Two fingers up gesture
+    </span>
+  </div>
+);
 
 interface RatingButtonProps extends ButtonProps {
   label: string;
   emoji: string;
-  color: string;
+  color: "red" | "amber" | "emerald";
   description: string;
   handleRateCard: () => void;
 }
@@ -193,10 +179,7 @@ const RatingButton: React.FC<RatingButtonProps> = ({
   isHovering,
   onHoverChange,
 }) => {
-  const colorMap: Record<
-    string,
-    { base: string; hover: string; shadow: string }
-  > = {
+  const colorMap = {
     red: {
       base: "#EF4444",
       hover: "#DC2626",
@@ -212,23 +195,23 @@ const RatingButton: React.FC<RatingButtonProps> = ({
       hover: "#059669",
       shadow: "rgba(16,185,129,0.05)",
     },
-  };
+  } as const;
 
-  const colors = colorMap[color];
+  const { base, hover, shadow } = colorMap[color];
 
   return (
     <div className="flex flex-col items-center">
       <button
-        className={`px-8 py-4 font-medium text-white bg-${color}-500 rounded-lg transition-all duration-200 ease-in-out shadow-[0px_1px_2px_${colors.shadow}]`}
         onClick={handleRateCard}
         onMouseEnter={() => onHoverChange(true)}
         onMouseLeave={() => onHoverChange(false)}
+        className="px-8 py-4 font-medium text-white rounded-lg transition-all duration-200 ease-in-out"
         style={{
-          background: isHovering ? colors.hover : colors.base,
+          background: isHovering ? hover : base,
           transform: isHovering ? "translateY(-1px)" : undefined,
           boxShadow: isHovering
-            ? `0px 4px 6px ${colors.shadow}`
-            : `0px 1px 2px ${colors.shadow}`,
+            ? `0px 4px 6px ${shadow}`
+            : `0px 1px 2px ${shadow}`,
         }}
       >
         <span>
