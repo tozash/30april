@@ -1,32 +1,21 @@
+import 'dotenv/config';
+console.log('🔥 FIREBASE_API_KEY=', process.env.FIREBASE_API_KEY)
+
 import Fastify from "fastify";
-import jwt from "@fastify/jwt";
-import authPlugin from "./plugins/auth";
 import { cards, Flashcard } from "./data";
+import firebaseAdmin from "./plugins/firebaseAdmin";
+import authRoutes from "./routes/auth";
 
 const app = Fastify({ logger: true });
 
 // ─── Auth plugin ────────────────────────────────────────────────────────────────
-app.register(jwt, { secret: "dev-secret-change-me" });
-app.register(authPlugin);
+app.register(firebaseAdmin);
+app.register(authRoutes);
 
 // ─── Routes ─────────────────────────────────────────────────────────────────────
 
 // health
 app.get("/health", () => ({ ok: true }));
-
-// Register / Login – both just hand back a dev token
-app.post<{ Body: { username: string; password: string } }>(
-  "/auth/register",
-  async (req, res) => {
-    const token = app.jwt.sign({ u: req.body.username });
-    return res.send({ token });
-  }
-);
-app.post("/auth/login", async (req, res) => {
-  const token = app.jwt.sign({ u: "demo" });
-  res.send({ token });
-});
-app.post("/auth/logout", async (_, res) => res.code(204).send());
 
 // Get today’s due flashcards
 app.get("/flashcards/today", { preHandler: app.auth }, (_, res) => {
