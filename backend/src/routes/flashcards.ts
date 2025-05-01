@@ -63,6 +63,69 @@ const flashcardRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(201).send({ id: docRef.id, front, back, hint, tags })
     }
   )
+
+  // ─── PUT /flashcards/:id/:feedback ───────────────────────────────
+  // Update the card's bucket based on the feedback
+  app.put<{ Params: { id: string; feedback: 'easy' | 'hard' | 'wrong' } }>(
+    '/flashcards/:id/:feedback',
+    { preHandler: app.auth },
+    async (req, reply) => {
+      const uid = req.uid!
+      const { id, feedback } = req.params
+      const user = app.db.collection('users').doc(uid)
+
+      // 1) find & remove from old bucket
+      let oldBucket: number | null = null
+      let cardData: FlashcardBase | null = null
+      let oldDocument: FirebaseFirestore.DocumentReference | null = null;
+
+      for (let b = 1; b <= 5; b++) {
+        const docRef = user.collection(String(b)).doc(id)
+        const snap = await docRef.get()
+        if (snap.exists) {
+          oldBucket = b
+          cardData = snap.data() as FlashcardBase
+          oldDocument = docRef
+          break
+        }
+      }
+
+      if (!oldBucket || !cardData) {
+        return reply.code(404).send({ message: 'Card not found' })
+      }
+
+      // 2) compute new bucket
+      let newBucket = oldBucket
+      switch (feedback) {
+        case 'easy':
+          newBucket = Math.min(oldBucket + 1, 5)
+          break
+        case 'hard':
+          newBucket = Math.max(oldBucket - 1, 1)
+          break
+        case 'wrong':
+          newBucket = 1
+          break
+      }
+
+      if (newBucket === oldBucket) {
+        return reply.code(200).send({ message: 'No change in bucket' })
+      }
+
+      // 3) delete from old bucket
+      await oldDocument!.delete()
+
+      // 4) write into new bucket
+      await user
+        .collection(String(newBucket))
+        .doc(id)
+        .set(cardData)
+
+      // 5) return the card
+      const updatedCard: Flashcard = { id, ...cardData }
+      return reply.send(updatedCard)
+    }
+  )
 }
 
 export default flashcardRoutes
