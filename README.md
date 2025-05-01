@@ -54,3 +54,41 @@ Sample call: PUT /flashcards/3/wrong
 ### Aggregate
 
 Also a useful thing to run for quick checking with LLMs is "npm run aggregate", which runs backend/scripts/aggregator.js and produces a .txt file with combined content of everything in backend/src
+
+## Frontend
+
+React + TypeScript + Vite + TailwindCSS
+
+Features a modern web interface for flashcard learning with hand gesture controls.
+
+### Components
+
+- **HandVisualizer** - Camera-based hand gesture recognition for card interactions
+  - Toggle hint (index finger)
+  - Show answer (index + middle finger)
+  - Rate cards (thumbs up/down, flat hand)
+  - Next day (ok sign)
+
+### Setup
+
+1. Install dependencies:
+```bash
+cd frontend
+npm install
+```
+
+2. Start development server:
+```bash
+npm run dev
+```
+
+The app will be available at `http://localhost:5173`
+
+### Hand Gestures
+
+- 👆 Index finger extended: Toggle hint
+- ✌️ Index + middle fingers: Show answer
+- 👍 Thumbs up: Rate card as Easy
+- ✋ Flat hand: Rate card as Hard
+- 👎 Thumbs down: Rate card as Wrong
+- 👌 OK sign: Move to next day
