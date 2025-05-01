@@ -25,7 +25,10 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
     easy: false,
   });
 
-  const handleHoverChange = (button: keyof typeof buttonHover, isHovering: boolean) => {
+  const handleHoverChange = (
+    button: keyof typeof buttonHover,
+    isHovering: boolean,
+  ) => {
     setButtonHover((prev) => ({
       ...prev,
       [button]: isHovering,
@@ -40,13 +43,17 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
             showHint={showHint}
             setShowHint={setShowHint}
             isHovering={buttonHover.hint}
-            onHoverChange={(isHovering) => handleHoverChange("hint", isHovering)}
+            onHoverChange={(isHovering) =>
+              handleHoverChange("hint", isHovering)
+            }
           />
 
           <ShowAnswerButton
             handleShowAnswer={handleShowAnswer}
             isHovering={buttonHover.answer}
-            onHoverChange={(isHovering) => handleHoverChange("answer", isHovering)}
+            onHoverChange={(isHovering) =>
+              handleHoverChange("answer", isHovering)
+            }
           />
         </div>
       ) : (
@@ -61,7 +68,9 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
               color="red"
               handleRateCard={() => handleRateCard("Wrong")}
               isHovering={buttonHover.wrong}
-              onHoverChange={(isHovering) => handleHoverChange("wrong", isHovering)}
+              onHoverChange={(isHovering) =>
+                handleHoverChange("wrong", isHovering)
+              }
               description="Thumbs down gesture"
             />
 
@@ -71,7 +80,9 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
               color="amber"
               handleRateCard={() => handleRateCard("Hard")}
               isHovering={buttonHover.hard}
-              onHoverChange={(isHovering) => handleHoverChange("hard", isHovering)}
+              onHoverChange={(isHovering) =>
+                handleHoverChange("hard", isHovering)
+              }
               description="Palm forward gesture"
             />
 
@@ -81,7 +92,9 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
               color="emerald"
               handleRateCard={() => handleRateCard("Easy")}
               isHovering={buttonHover.easy}
-              onHoverChange={(isHovering) => handleHoverChange("easy", isHovering)}
+              onHoverChange={(isHovering) =>
+                handleHoverChange("easy", isHovering)
+              }
               description="Thumbs up gesture"
             />
           </div>

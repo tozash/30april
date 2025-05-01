@@ -6,7 +6,17 @@ import ActionButtons from './ActionButtons';
 import CompletionScreen from './CompletionScreen';
 import HandVisualizer from './HandVisualizer';
 
-const FlashcardLearner: React.FC = () => {
+interface User {
+  id: string;
+  username: string;
+}
+
+interface FlashcardLearnerProps {
+  user: User | null;
+  onLogout: () => void;
+}
+
+const FlashcardLearner: React.FC<FlashcardLearnerProps> = ({ user, onLogout }) => {
   const [currentCard, setCurrentCard] = useState(1);
   const totalCards = 6;                     // no need for setTotalCards if it never changes
 
@@ -47,7 +57,7 @@ const FlashcardLearner: React.FC = () => {
       default:
         break;
     }
-  
+
     // 2) prepare the next index
     const next = currentCard + 1;
     // clamp it so we never exceed totalCards
@@ -55,13 +65,12 @@ const FlashcardLearner: React.FC = () => {
     // reset UI
     setShowAnswer(false);
     setShowHint(false);
-  
-    // 3) if we’ve just gone past the last card, show completion
+
+    // 3) if we've just gone past the last card, show completion
     if (next > totalCards) {
       setShowComplete(true);
     }
   };
-  
 
   const handleNextDay = () => {
     setCurrentDay(prev => prev + 1);
@@ -79,10 +88,12 @@ const FlashcardLearner: React.FC = () => {
         currentDay={currentDay}
         currentCard={currentCard}
         totalCards={totalCards}
+        user={user}
+        onLogout={onLogout}
       />
 
       <div className="flex flex-col gap-8 items-center px-4 py-8 mx-auto w-full max-w-[950px]">
-      <div className="w-full">
+        <div className="w-full">
           <HandVisualizer />
         </div>
         {!showComplete ? (

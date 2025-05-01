@@ -3,13 +3,26 @@ import * as React from "react";
 import { useState } from "react";
 import ProgressBar from "./ProgressBar";
 
+interface User {
+  id: string;
+  username: string;
+}
+
 interface HeaderProps {
   currentDay: number;
   currentCard: number;
   totalCards: number;
+  user: User | null;
+  onLogout: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ currentDay, currentCard, totalCards }) => {
+const Header: React.FC<HeaderProps> = ({
+  currentDay,
+  currentCard,
+  totalCards,
+  user,
+  onLogout,
+}) => {
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [buttonHover, setButtonHover] = useState({
     profile: false,
@@ -47,7 +60,7 @@ const Header: React.FC<HeaderProps> = ({ currentDay, currentCard, totalCards }) 
                 aria-haspopup="true"
               >
                 <span className="text-sm font-medium leading-5 text-gray-900">
-                  Sarah Chen
+                  {user?.username || "Sarah Chen"}
                 </span>
                 <svg viewBox="0 0 16 16" fill="none" className="w-4 h-4">
                   <path
@@ -73,6 +86,7 @@ const Header: React.FC<HeaderProps> = ({ currentDay, currentCard, totalCards }) 
                     style={{
                       background: buttonHover.logout ? "#FEF2F2" : undefined,
                     }}
+                    onClick={onLogout}
                   >
                     Logout
                   </button>
@@ -81,7 +95,7 @@ const Header: React.FC<HeaderProps> = ({ currentDay, currentCard, totalCards }) 
             </div>
           </div>
         </div>
-        <ProgressBar currentCard={currentCard} totalCards={totalCards}></ProgressBar>
+        <ProgressBar currentCard={currentCard} totalCards={totalCards} />
       </div>
     </header>
   );

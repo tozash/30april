@@ -4,12 +4,17 @@ import { useState } from "react";
 
 interface CompletionScreenProps {
   onNextDay: () => void;
-  easy:number;
-  hard:number;
-  wrong:number;
+  easy: number;
+  hard: number;
+  wrong: number;
 }
 
-const CompletionScreen: React.FC<CompletionScreenProps> = ({ onNextDay,easy,hard,wrong }) => {
+const CompletionScreen: React.FC<CompletionScreenProps> = ({
+  onNextDay,
+  easy,
+  hard,
+  wrong,
+}) => {
   const [buttonHover, setButtonHover] = useState(false);
 
   return (
