@@ -2,83 +2,92 @@
 import React, { useState } from "react";
 import { useAuth } from "./AuthContext";
 
-const LoginForm: React.FC = () => {
-  const { login, isLoading } = useAuth();
-  const [username, setUsername] = useState("");
+interface LoginFormProps {
+  onLogin: (email: string, password: string) => Promise<void>;
+  onSwitchToSignup: () => void;
+}
+
+const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onSwitchToSignup }) => {
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setIsLoading(true);
 
-    if (!username || !password) {
-      setError("Please fill in all fields");
-      return;
-    }
-
-    const success = await login(username, password);
-    if (!success) {
-      setError("Invalid username or password");
+    try {
+      await onLogin(email, password);
+    } catch (err) {
+      setError("Invalid email or password");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="bg-white p-8 rounded-lg shadow-sm">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">
-        Log in to Flashcard Learner
-      </h2>
+    <div className="w-full max-w-md">
+      <form onSubmit={handleSubmit} className="bg-white shadow-lg rounded-xl px-8 pt-6 pb-8 mb-4">
+        <h2 className="text-xl font-semibold mb-6 text-center text-gray-800">Login to Flashcards</h2>
+        
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm">
+            {error}
+          </div>
+        )}
 
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 text-red-500 rounded-md text-sm">
-          {error}
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit}>
         <div className="mb-4">
-          <label
-            htmlFor="username"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            Username
+          <label className="block text-gray-700 text-sm font-medium mb-2" htmlFor="email">
+            Email
           </label>
           <input
-            id="username"
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-            placeholder="johndoe"
+            className="appearance-none border border-gray-200 rounded-lg w-full py-2.5 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             required
           />
         </div>
 
         <div className="mb-6">
-          <label
-            htmlFor="password"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
+          <label className="block text-gray-700 text-sm font-medium mb-2" htmlFor="password">
             Password
           </label>
           <input
+            className="appearance-none border border-gray-200 rounded-lg w-full py-2.5 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
             id="password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-            placeholder="••••••••"
             required
           />
         </div>
 
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isLoading ? "Logging in..." : "Log in"}
-        </button>
+        <div className="flex items-center justify-between">
+          <button
+            className="bg-[#4B4FBA] hover:bg-[#3d40a0] text-white font-medium py-2.5 px-5 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4B4FBA] transition-all duration-200"
+            type="submit"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Logging in...' : 'Sign In'}
+          </button>
+        </div>
+
+        <div className="mt-4 text-center">
+          <p className="text-sm text-gray-600">
+            Don't have an account?{' '}
+            <button
+              type="button"
+              onClick={onSwitchToSignup}
+              className="text-[#4B4FBA] hover:text-[#3d40a0] font-medium transition-colors duration-200"
+            >
+              Sign up
+            </button>
+          </p>
+        </div>
       </form>
     </div>
   );

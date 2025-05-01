@@ -1,10 +1,12 @@
 'use client';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from './Header';
 import Flashcard from './Flashcard';
 import ActionButtons from './ActionButtons';
 import CompletionScreen from './CompletionScreen';
 import HandVisualizer from './HandVisualizer';
+import { flashcardAPI } from '../services/api';
+import { Flashcard as FlashcardType } from '../types/flashcard';
 
 interface User {
   id: string;
@@ -18,23 +20,44 @@ interface FlashcardLearnerProps {
 
 const FlashcardLearner: React.FC<FlashcardLearnerProps> = ({ user, onLogout }) => {
   const [currentCard, setCurrentCard] = useState(1);
-  const totalCards = 6;                     // no need for setTotalCards if it never changes
-
+  const [totalCards, setTotalCards] = useState(0);
   const [showHint, setShowHint] = useState(false);
   const [showAnswer, setShowAnswer] = useState(false);
   const [showComplete, setShowComplete] = useState(false);
   const [currentDay, setCurrentDay] = useState(1);
   const [showAnswerAnimation, setShowAnswerAnimation] = useState(false);
-
   const [easyCount, setEasyCount] = useState(0);
   const [hardCount, setHardCount] = useState(0);
   const [wrongCount, setWrongCount] = useState(0);
+  const [flashcards, setFlashcards] = useState<FlashcardType[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [hintText] = useState(
-    'Hint: This is a common informal greeting used throughout the day'
-  );
-  const [questionText] = useState('bonjour');
-  const [answerText] = useState('hello');
+  // Load flashcards when component mounts or user changes
+  useEffect(() => {
+    const loadFlashcards = async () => {
+      if (!user) return;
+      
+      try {
+        setIsLoading(true);
+        const cards = await flashcardAPI.getTodayCards();
+        setFlashcards(cards);
+        setTotalCards(cards.length);
+        setCurrentCard(1);
+        setShowAnswer(false);
+        setShowHint(false);
+        setShowComplete(false);
+        setEasyCount(0);
+        setHardCount(0);
+        setWrongCount(0);
+      } catch (error) {
+        console.error('Error loading flashcards:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadFlashcards();
+  }, [user]);
 
   const handleShowAnswer = () => {
     setShowAnswerAnimation(true);
@@ -42,45 +65,66 @@ const FlashcardLearner: React.FC<FlashcardLearnerProps> = ({ user, onLogout }) =
     setTimeout(() => setShowAnswerAnimation(false), 300);
   };
 
-  const handleRateCard = (label: string) => {
-    // 1) bump the counter
-    switch (label) {
-      case 'Easy':
-        setEasyCount((c) => c + 1);
-        break;
-      case 'Hard':
-        setHardCount((c) => c + 1);
-        break;
-      case 'Wrong':
-        setWrongCount((c) => c + 1);
-        break;
-      default:
-        break;
-    }
+  const handleRateCard = async (label: string) => {
+    if (!flashcards[currentCard - 1]) return;
 
-    // 2) prepare the next index
-    const next = currentCard + 1;
-    // clamp it so we never exceed totalCards
-    setCurrentCard(Math.min(next, totalCards));
-    // reset UI
-    setShowAnswer(false);
-    setShowHint(false);
+    try {
+      // Update the card's rating in the backend
+      await flashcardAPI.rateCard(flashcards[currentCard - 1].id, label.toLowerCase() as 'easy' | 'hard' | 'wrong');
 
-    // 3) if we've just gone past the last card, show completion
-    if (next > totalCards) {
-      setShowComplete(true);
+      // Update local state
+      switch (label) {
+        case 'Easy':
+          setEasyCount((c) => c + 1);
+          break;
+        case 'Hard':
+          setHardCount((c) => c + 1);
+          break;
+        case 'Wrong':
+          setWrongCount((c) => c + 1);
+          break;
+        default:
+          break;
+      }
+
+      const next = currentCard + 1;
+      setCurrentCard(Math.min(next, totalCards));
+      setShowAnswer(false);
+      setShowHint(false);
+
+      if (next > totalCards) {
+        setShowComplete(true);
+      }
+    } catch (error) {
+      console.error('Error rating card:', error);
     }
   };
 
-  const handleNextDay = () => {
-    setCurrentDay(prev => prev + 1);
-    setCurrentCard(1);
-    setShowComplete(false);
-    // reset counts for the new day if desired:
-    setEasyCount(0);
-    setHardCount(0);
-    setWrongCount(0);
+  const handleNextDay = async () => {
+    try {
+      setCurrentDay(prev => prev + 1);
+      const cards = await flashcardAPI.getTodayCards();
+      setFlashcards(cards);
+      setTotalCards(cards.length);
+      setCurrentCard(1);
+      setShowComplete(false);
+      setEasyCount(0);
+      setHardCount(0);
+      setWrongCount(0);
+    } catch (error) {
+      console.error('Error loading next day cards:', error);
+    }
   };
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  }
+
+  if (flashcards.length === 0) {
+    return <div className="flex items-center justify-center min-h-screen">No flashcards for today!</div>;
+  }
+
+  const currentFlashcard = flashcards[currentCard - 1];
 
   return (
     <div className="flex flex-col items-center w-screen bg-gray-50 min-h-screen overflow-x-hidden">
@@ -100,14 +144,16 @@ const FlashcardLearner: React.FC<FlashcardLearnerProps> = ({ user, onLogout }) =
             handleRateCard={handleRateCard}
             showAnswer={showAnswer}
             showHint={showHint}
+            onNextDay={handleNextDay}
+            showComplete={showComplete}
           />
         </div>
         {!showComplete ? (
           <>
             <Flashcard
-              questionText={questionText}
-              answerText={answerText}
-              hintText={hintText}
+              questionText={currentFlashcard.front}
+              answerText={currentFlashcard.back}
+              hintText={currentFlashcard.hint}
               showHint={showHint}
               showAnswer={showAnswer}
               showAnswerAnimation={showAnswerAnimation}

@@ -2,108 +2,112 @@
 import React, { useState } from "react";
 import { useAuth } from "./AuthContext";
 
-const SignupForm: React.FC = () => {
-  const { signup, isLoading } = useAuth();
-  const [username, setUsername] = useState("");
+interface SignupFormProps {
+  onSignup: (email: string, password: string, confirmPassword: string) => Promise<void>;
+  onSwitchToLogin: () => void;
+}
+
+const SignupForm: React.FC<SignupFormProps> = ({ onSignup, onSwitchToLogin }) => {
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-
-    if (!username || !password || !confirmPassword) {
-      setError("Please fill in all fields");
-      return;
-    }
 
     if (password !== confirmPassword) {
       setError("Passwords do not match");
       return;
     }
 
-    const success = await signup(username, password);
-    if (!success) {
-      setError("Failed to create account. Please try again.");
+    setIsLoading(true);
+    try {
+      await onSignup(email, password, confirmPassword);
+    } catch (err) {
+      setError("Registration failed. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="bg-white p-8 rounded-lg shadow-sm">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">
-        Create your account
-      </h2>
-
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 text-red-500 rounded-md text-sm">
-          {error}
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit}>
+    <div className="w-full max-w-md">
+      <form onSubmit={handleSubmit} className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+        <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">Sign Up</h2>
+        
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
+            {error}
+          </div>
+        )}
 
         <div className="mb-4">
-          <label
-            htmlFor="username"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            Username
+          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">
+            Email
           </label>
           <input
-            id="username"
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-            placeholder="johndoe"
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             required
           />
         </div>
 
         <div className="mb-4">
-          <label
-            htmlFor="password"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
+          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">
             Password
           </label>
           <input
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
             id="password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-            placeholder="••••••••"
             required
           />
         </div>
 
         <div className="mb-6">
-          <label
-            htmlFor="confirmPassword"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
+          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="confirmPassword">
             Confirm Password
           </label>
           <input
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
             id="confirmPassword"
             type="password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-            placeholder="••••••••"
             required
           />
         </div>
 
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isLoading ? "Creating account..." : "Sign up"}
-        </button>
+        <div className="flex items-center justify-between">
+          <button
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            type="submit"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Signing up...' : 'Sign Up'}
+          </button>
+        </div>
+
+        <div className="mt-4 text-center">
+          <p className="text-sm text-gray-600">
+            Already have an account?{' '}
+            <button
+              type="button"
+              onClick={onSwitchToLogin}
+              className="text-blue-500 hover:text-blue-700 font-medium"
+            >
+              Log in
+            </button>
+          </p>
+        </div>
       </form>
     </div>
   );
