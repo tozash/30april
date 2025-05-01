@@ -30,7 +30,15 @@ const authRoutes: FastifyPluginAsync = async (app) => {
       const { data } = await axios.post<FirebaseAuthResponse>(
         url,
         { email, password, returnSecureToken: true }
-      )
+      );
+
+      const uid = data.localId;
+
+      await app.db
+        .collection('users')
+        .doc(uid)
+        .set({ day: 0 });
+
       return reply.send({
         idToken: data.idToken,
         refreshToken: data.refreshToken,
