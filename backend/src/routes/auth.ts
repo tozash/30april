@@ -26,18 +26,22 @@ const authRoutes: FastifyPluginAsync = async (app) => {
       
       console.log('🔑 Using API_KEY:', JSON.stringify(API_KEY))
       console.log('🌐 Calling Firebase URL:', url)
-  
+      console.log('📧 Email:', email)
+      console.log('🔒 Password', password);
+
       const { data } = await axios.post<FirebaseAuthResponse>(
         url,
         { email, password, returnSecureToken: true }
       );
+
+      console.log('📦 Firebase response:', data)
 
       const uid = data.localId;
 
       await app.db
         .collection('users')
         .doc(uid)
-        .set({ day: 0 });
+        .set({ day: 0, email: email });
 
       return reply.send({
         idToken: data.idToken,
