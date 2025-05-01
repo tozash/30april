@@ -5,26 +5,59 @@ if (window.contentScriptLoaded) {
   window.contentScriptLoaded = true;
   console.log("Content script loaded!");
 
-  // Create popup icon
+  // Create popup icon container
   const icon = document.createElement("div");
   icon.className = "popup-icon";
-  icon.innerHTML = "🔍";
   icon.style.cssText = `
     position: fixed;
     cursor: pointer;
     z-index: 10000;
     background: white;
-    border-radius: 50%;
-    padding: 8px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    border-radius: 20px;
+    padding: 8px 16px 8px 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     display: none;
-    width: 30px;
-    height: 30px;
+    height: 36px;
     text-align: center;
-    line-height: 30px;
     pointer-events: auto;
     transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    color: #4B4FBA;
   `;
+
+  // Add SVG logo
+  const logoSvg = `
+    <svg width="24" height="24" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="10" y="12" width="36" height="44" rx="4" stroke="#4B4FBA" stroke-width="4"/>
+      <rect x="18" y="8" width="36" height="44" rx="4" stroke="#4B4FBA" stroke-width="4"/>
+      <path d="M36 28C36 25.7909 34.2091 24 32 24C29.7909 24 28 25.7909 28 28C28 29.6569 29.0662 31.0709 30.5 31.6528V34H33.5V31.6528C34.9338 31.0709 36 29.6569 36 28Z" fill="#4B4FBA"/>
+    </svg>
+  `;
+
+  // Create logo element
+  const logoContainer = document.createElement("div");
+  logoContainer.style.cssText = `
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+  `;
+  logoContainer.innerHTML = logoSvg;
+
+  // Create text element
+  const textElement = document.createElement("span");
+  textElement.textContent = "Create Flashcard";
+
+  // Add elements to icon container
+  icon.appendChild(logoContainer);
+  icon.appendChild(textElement);
+
   document.body.appendChild(icon);
 
   // Create popup window
@@ -241,7 +274,8 @@ if (window.contentScriptLoaded) {
     if (!lastSelection) return;
 
     // Visual feedback when icon is clicked
-    icon.style.transform = "scale(0.85)";
+    icon.style.transform = "scale(0.95)";
+    icon.style.backgroundColor = "#f5f5ff";
 
     // Add a ripple effect
     const ripple = document.createElement("div");
@@ -252,27 +286,29 @@ if (window.contentScriptLoaded) {
       transform: translate(-50%, -50%);
       width: 0;
       height: 0;
-      background: rgba(75, 79, 186, 0.3);
-      border-radius: 50%;
+      background: rgba(75, 79, 186, 0.15);
+      border-radius: 20px;
       pointer-events: none;
     `;
     icon.appendChild(ripple);
 
     // Animate ripple
     let size = 0;
+    const maxSize = Math.max(icon.offsetWidth, icon.offsetHeight) * 1.5;
     const rippleAnimation = setInterval(() => {
-      size += 4;
+      size += 8;
       ripple.style.width = `${size}px`;
       ripple.style.height = `${size}px`;
-      ripple.style.opacity = 1 - size / 60;
+      ripple.style.opacity = 1 - size / maxSize;
 
-      if (size > 60) {
+      if (size > maxSize) {
         clearInterval(rippleAnimation);
         icon.removeChild(ripple);
 
         // Reset icon appearance
         setTimeout(() => {
           icon.style.transform = "scale(1)";
+          icon.style.backgroundColor = "white";
         }, 150);
 
         // Show popup after visual feedback
@@ -296,21 +332,41 @@ if (window.contentScriptLoaded) {
           rect: rect,
         };
 
+        // Calculate position (centered above the selection)
+        const iconWidth = 180; // Approximate width of the button with text
+        const left = Math.max(
+          5,
+          Math.min(
+            document.documentElement.clientWidth - iconWidth - 5,
+            rect.left + rect.width / 2 - iconWidth / 2,
+          ),
+        );
+
         // Show icon with animation
-        icon.style.display = "block";
+        icon.style.display = "flex";
         icon.style.opacity = "0";
-        icon.style.transform = "scale(0.8)";
-        icon.style.top = `${rect.top - 40}px`;
-        icon.style.left = `${rect.left + rect.width / 2 - 15}px`;
+        icon.style.transform = "scale(0.9) translateY(10px)";
+        icon.style.top = `${Math.max(5, rect.top - 45)}px`;
+        icon.style.left = `${left}px`;
 
         // Animate icon appearance
         setTimeout(() => {
           icon.style.opacity = "1";
-          icon.style.transform = "scale(1)";
+          icon.style.transform = "scale(1) translateY(0)";
         }, 10);
 
-        icon.onmouseover = () => (icon.style.transform = "scale(1.2)");
-        icon.onmouseout = () => (icon.style.transform = "scale(1)");
+        // Add hover effects
+        icon.onmouseover = () => {
+          icon.style.transform = "scale(1.05)";
+          icon.style.boxShadow = "0 4px 12px rgba(75, 79, 186, 0.2)";
+          icon.style.backgroundColor = "#f8f8ff";
+        };
+
+        icon.onmouseout = () => {
+          icon.style.transform = "scale(1)";
+          icon.style.boxShadow = "0 2px 8px rgba(0,0,0,0.2)";
+          icon.style.backgroundColor = "white";
+        };
       } catch (error) {
         console.error("Error processing selection:", error);
       }
@@ -318,7 +374,7 @@ if (window.contentScriptLoaded) {
       // Hide icon with animation
       if (icon.style.display !== "none") {
         icon.style.opacity = "0";
-        icon.style.transform = "scale(0.8)";
+        icon.style.transform = "scale(0.9) translateY(10px)";
         setTimeout(() => {
           icon.style.display = "none";
         }, 200);
