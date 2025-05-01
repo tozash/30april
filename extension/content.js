@@ -479,94 +479,96 @@ if (window.contentScriptLoaded) {
     }
   }
 
-  icon.onclick = function (e) {
-    e.stopPropagation();
-    e.preventDefault();
-
-    if (!lastSelection) return;
-
-    // Visual feedback when icon is clicked
-    icon.style.transform = "scale(0.95)";
-    icon.style.backgroundColor = "#f5f5ff";
-
-    // Add a ripple effect
-    const ripple = document.createElement("div");
-    ripple.style.cssText = `
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 0;
-      height: 0;
-      background: rgba(75, 79, 186, 0.15);
-      border-radius: 20px;
-      pointer-events: none;
-    `;
-    icon.appendChild(ripple);
-
-    // Animate ripple
-    let size = 0;
-    const maxSize = Math.max(icon.offsetWidth, icon.offsetHeight) * 1.5;
-    const rippleAnimation = setInterval(() => {
-      size += 8;
-      ripple.style.width = `${size}px`;
-      ripple.style.height = `${size}px`;
-      ripple.style.opacity = 1 - size / maxSize;
-
-      if (size > maxSize) {
-        clearInterval(rippleAnimation);
-        icon.removeChild(ripple);
-
-        // Reset icon appearance
-        setTimeout(() => {
-          icon.style.transform = "scale(1)";
-          icon.style.backgroundColor = "white";
-        }, 150);
-
-        // Show popup after visual feedback
-        const htmlCode = lastSelection.text;
-        if (htmlCode) showPopup(htmlCode);
-      }
-    }, 10);
-  };
-
   function handleSelection() {
     const selection = window.getSelection();
-    const selectedText = selection.toString().trim();
+    
+    // Ensure we have a valid selection
+    if (!selection || selection.rangeCount === 0) {
+      hideIcon();
+      lastSelection = null;
+      return;
+    }
 
+    const selectedText = selection.toString().trim();
+    
     if (selectedText) {
       try {
         const range = selection.getRangeAt(0);
-        const rect = range.getBoundingClientRect();
+        const rects = range.getClientRects();
+        
+        // Get the bounding rect that encompasses all selected elements
+        let boundingRect = range.getBoundingClientRect();
+        
+        // If we have multiple client rects, calculate the overall bounding box
+        if (rects.length > 1) {
+          let top = Infinity;
+          let left = Infinity;
+          let right = -Infinity;
+          let bottom = -Infinity;
+          
+          for (let i = 0; i < rects.length; i++) {
+            const rect = rects[i];
+            top = Math.min(top, rect.top);
+            left = Math.min(left, rect.left);
+            right = Math.max(right, rect.right);
+            bottom = Math.max(bottom, rect.bottom);
+          }
+          
+          boundingRect = {
+            top,
+            left,
+            right,
+            bottom,
+            width: right - left,
+            height: bottom - top
+          };
+        }
 
+        // Store selection with full context
         lastSelection = {
           text: selectedText,
-          rect: rect,
+          rect: boundingRect,
+          html: range.cloneContents().textContent, // Get clean text content
+          range: {
+            startContainer: range.startContainer,
+            startOffset: range.startOffset,
+            endContainer: range.endContainer,
+            endOffset: range.endOffset
+          }
         };
 
-        // Calculate position (centered above the selection)
-        const iconWidth = 180; // Approximate width of the button with text
-        const left = Math.max(
-          5,
+        // Calculate icon position
+        const iconWidth = 180;
+        const iconHeight = 32;
+        const margin = 10;
+        
+        // Position relative to viewport
+        const viewportWidth = document.documentElement.clientWidth;
+        const viewportHeight = document.documentElement.clientHeight;
+        
+        // Calculate initial position (centered above selection)
+        let left = Math.max(
+          margin,
           Math.min(
-            document.documentElement.clientWidth - iconWidth - 5,
-            rect.left + rect.width / 2 - iconWidth / 2,
-          ),
+            viewportWidth - iconWidth - margin,
+            boundingRect.left + (boundingRect.width / 2) - (iconWidth / 2)
+          )
         );
+        
+        let top = boundingRect.top - iconHeight - margin;
+        
+        // If icon would be off-screen at the top, place it below the selection
+        if (top < margin) {
+          top = boundingRect.bottom + margin;
+        }
 
         // Show icon with animation
         icon.style.display = "flex";
         icon.style.opacity = "0";
         icon.style.transform = "scale(0.9) translateY(10px)";
-        icon.style.top = `${Math.max(5, rect.top - 45)}px`;
+        icon.style.top = `${Math.max(margin, top)}px`;
         icon.style.left = `${left}px`;
-
-        // Animate icon appearance
-        setTimeout(() => {
-          icon.style.opacity = "1";
-          icon.style.transform = "scale(1) translateY(0)";
-        }, 10);
-
+        
         // Add hover effects
         icon.onmouseover = () => {
           icon.style.transform = "scale(1.05)";
@@ -579,50 +581,78 @@ if (window.contentScriptLoaded) {
           icon.style.boxShadow = "0 2px 8px rgba(0,0,0,0.2)";
           icon.style.backgroundColor = "white";
         };
+
+        // Animate icon appearance
+        requestAnimationFrame(() => {
+          icon.style.opacity = "1";
+          icon.style.transform = "scale(1) translateY(0)";
+        });
+
       } catch (error) {
         console.error("Error processing selection:", error);
+        hideIcon();
       }
     } else {
-      // Hide icon with animation
-      if (icon.style.display !== "none") {
-        icon.style.opacity = "0";
-        icon.style.transform = "scale(0.9) translateY(10px)";
-        setTimeout(() => {
-          icon.style.display = "none";
-        }, 200);
-      }
-      lastSelection = null;
+      hideIcon();
     }
   }
 
-  // Listen for messages from the popup
-  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === "getSelectedText" && lastSelection) {
-      sendResponse({ selectedText: lastSelection.text });
+  function hideIcon() {
+    if (icon.style.display !== "none") {
+      icon.style.opacity = "0";
+      icon.style.transform = "scale(0.9) translateY(10px)";
+      setTimeout(() => {
+        icon.style.display = "none";
+      }, 200);
     }
-    return true;
-  });
+    lastSelection = null;
+  }
 
-  document.addEventListener(
-    "mousedown",
-    function (e) {
-      if (e.target === icon) e.preventDefault();
-    },
-    { passive: false },
-  );
+  // Debounce the selection handler to improve performance
+  function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  }
 
-  document.addEventListener("mouseup", handleSelection, { passive: true });
-  document.addEventListener("selectionchange", handleSelection, {
-    passive: true,
-  });
+  const debouncedHandleSelection = debounce(handleSelection, 150);
 
-  document.addEventListener(
-    "click",
-    function (e) {
-      if (!popup.contains(e.target) && e.target !== icon) {
-        popup.style.display = "none";
-      }
-    },
-    { passive: true },
-  );
+  // Event Listeners
+  document.addEventListener("mouseup", debouncedHandleSelection, { passive: true });
+  document.addEventListener("selectionchange", debouncedHandleSelection, { passive: true });
+  document.addEventListener("keyup", debouncedHandleSelection, { passive: true });
+
+  // Handle clicks outside the popup
+  document.addEventListener("click", (e) => {
+    if (!popup.contains(e.target) && e.target !== icon) {
+      popup.style.display = "none";
+    }
+  }, { passive: true });
+
+  // Prevent text selection when clicking the icon
+  document.addEventListener("mousedown", (e) => {
+    if (e.target === icon || icon.contains(e.target)) {
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  // Handle window resize
+  window.addEventListener("resize", debounce(() => {
+    if (lastSelection) {
+      handleSelection();
+    }
+  }, 100), { passive: true });
+
+  // Handle scroll events on any element
+  document.addEventListener("scroll", debounce(() => {
+    if (lastSelection) {
+      handleSelection();
+    }
+  }, 100), { passive: true, capture: true });
 }
