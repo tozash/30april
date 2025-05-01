@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { loadHandposeModel, detectHandPoseFromLandmarks, HandPose } from '../utils/HandPose';
+import CompletionScreen from './CompletionScreen';
 
 interface HandVisualizerProps {
   onGestureDetected?: (gesture: HandPose) => void;
@@ -8,6 +9,7 @@ interface HandVisualizerProps {
   handleRateCard?: (label: string) => void;
   showAnswer?: boolean;
   showHint?: boolean;
+  holdTimeMs?: number;
 }
 
 const HandVisualizer: React.FC<HandVisualizerProps> = ({
@@ -16,43 +18,175 @@ const HandVisualizer: React.FC<HandVisualizerProps> = ({
   handleShowAnswer,
   handleRateCard,
   showAnswer,
-  showHint
+  showHint,
+  holdTimeMs = 3000 // Default to 3 seconds if not provided
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [handPose, setHandPose] = useState<HandPose>(null);
-  const [isCooldown, setIsCooldown] = useState(false);
-  const [cooldownTime, setCooldownTime] = useState(3);
-  const cooldownRef = useRef<NodeJS.Timeout | null>(null);
-  const cooldownIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [isHolding, setIsHolding] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(3);
+  const [progress, setProgress] = useState(0);
+  
+  // Refs for tracking state between renders
+  const handPoseRef = useRef<HandPose>(null);
+  const holdStartTimeRef = useRef<number | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const lastExecutionTimeRef = useRef<number>(0);
+  const COOLDOWN_PERIOD = 1000; // 1 second cooldown between gestures
 
-  const startCooldown = (pose: HandPose) => {
-    if (isCooldown) return;
+  const executeGesture = (pose: HandPose) => {
+    const now = Date.now();
+    if (now - lastExecutionTimeRef.current < COOLDOWN_PERIOD) {
+      return; // Still in cooldown
+    }
+
+    if (!showAnswer) {
+      if (pose === 'index_extended' && setShowHint) {
+        setShowHint(!showHint);
+      } else if (pose === 'index_middle_extended' && handleShowAnswer) {
+        handleShowAnswer();
+      }
+    } else if (handleRateCard) {
+      switch (pose) {
+        case 'thumbs_up':
+          handleRateCard('Easy');
+          break;
+        case 'flat_hand':
+          handleRateCard('Hard');
+          break;
+        case 'thumbs_down':
+          handleRateCard('Wrong');
+          break;
+        default:
+          break;
+      }
+    }
     
-    setIsCooldown(true);
-    setCooldownTime(3);
-
-    cooldownIntervalRef.current = setInterval(() => {
-      setCooldownTime(prev => {
-
-        console.log('cooldownTime', prev);
-        if (prev <= 1) {
-          if (cooldownIntervalRef.current) {
-            clearInterval(cooldownIntervalRef.current);
-          }
-          return 0;
-        }
-        return prev - 1;
-        
-      });
-    }, 0);
-
-
-    cooldownRef.current = setTimeout(() => {
-      setIsCooldown(false);
-      setCooldownTime(3);
-    }, 3000);
+    lastExecutionTimeRef.current = now;
+    holdStartTimeRef.current = null;
+    setIsHolding(false);
+    setProgress(0);
+    setTimeLeft(3);
   };
+
+  const updateHoldProgress = () => {
+    if (!holdStartTimeRef.current || !handPoseRef.current) {
+      return;
+    }
+
+    const now = Date.now();
+    const elapsedTime = now - holdStartTimeRef.current;
+    const newProgress = Math.min((elapsedTime / holdTimeMs) * 100, 100);
+    const newTimeLeft = Math.max(Math.ceil((holdTimeMs - elapsedTime) / 1000), 0);
+
+    setProgress(newProgress);
+    setTimeLeft(newTimeLeft);
+
+    if (elapsedTime >= holdTimeMs) {
+      executeGesture(handPoseRef.current);
+    } else {
+      animationFrameRef.current = requestAnimationFrame(updateHoldProgress);
+    }
+  };
+
+  const handleGestureDetection = (pose: HandPose) => {
+    if (pose !== handPoseRef.current) {
+      // New gesture detected
+      handPoseRef.current = pose;
+      holdStartTimeRef.current = Date.now();
+      setIsHolding(true);
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      updateHoldProgress();
+    }
+  };
+
+  const setupCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 640 },
+          height: { ideal: 480 }
+        }
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (err) {
+      console.error('Error accessing camera:', err);
+    }
+  };
+
+  useEffect(() => {
+    let model: any;
+
+    const detectHandPose = async () => {
+      if (!videoRef.current || !canvasRef.current || !model) return;
+
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext('2d');
+
+      if (!ctx) return;
+
+      // Set canvas size to match video
+      if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+      }
+
+      // Detect hand pose
+      const predictions = await model.estimateHands(video);
+      
+      if (predictions.length > 0) {
+        const landmarks = predictions[0].landmarks;
+        const detectedPose = detectHandPoseFromLandmarks(landmarks);
+        setHandPose(detectedPose);
+        
+        if (detectedPose) {
+          onGestureDetected?.(detectedPose);
+          handleGestureDetection(detectedPose);
+        }
+        
+        // Draw hand visualization
+        drawHand(ctx, landmarks);
+      } else {
+        setHandPose(null);
+        handPoseRef.current = null;
+        holdStartTimeRef.current = null;
+        setIsHolding(false);
+        setProgress(0);
+        setTimeLeft(3);
+        // Clear canvas when no hand is detected
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (videoRef.current) {
+          ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+        }
+      }
+
+      animationFrameRef.current = requestAnimationFrame(detectHandPose);
+    };
+
+    const initialize = async () => {
+      await setupCamera();
+      model = await loadHandposeModel();
+      detectHandPose();
+    };
+
+    initialize();
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      if (videoRef.current?.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [onGestureDetected, setShowHint, handleShowAnswer, handleRateCard, showAnswer, showHint, holdTimeMs]);
 
   const drawHand = (ctx: CanvasRenderingContext2D, landmarks: [number, number][]) => {
     // Clear the canvas first
@@ -99,119 +233,29 @@ const HandVisualizer: React.FC<HandVisualizerProps> = ({
     });
   };
 
-  const setupCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 640 },
-          height: { ideal: 480 }
-        }
-      });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
+  const getGestureAction = (pose: HandPose): string => {
+    if (!showAnswer) {
+      switch (pose) {
+        case 'index_extended':
+          return '👆 Toggle Hint';
+        case 'index_middle_extended':
+          return '✌️ Show Answer';
+        default:
+          return '';
       }
-    } catch (err) {
-      console.error('Error accessing camera:', err);
+    } else {
+      switch (pose) {
+        case 'thumbs_up':
+          return '👍 Rate Easy';
+        case 'flat_hand':
+          return '✋ Rate Hard';
+        case 'thumbs_down':
+          return '👎 Rate Wrong';
+        default:
+          return '';
+      }
     }
   };
-
-  useEffect(() => {
-    let model: any;
-    let animationFrameId: number;
-
-    const detectHandPose = async () => {
-      if (!videoRef.current || !canvasRef.current || !model) return;
-
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext('2d');
-
-      if (!ctx) return;
-
-      // Set canvas size to match video
-      if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-      }
-
-      // Detect hand pose
-      const predictions = await model.estimateHands(video);
-      
-      if (predictions.length > 0) {
-        const landmarks = predictions[0].landmarks;
-        const detectedPose = detectHandPoseFromLandmarks(landmarks);
-        setHandPose(detectedPose);
-        
-        // Call the appropriate function based on the detected pose
-        if (detectedPose && !isCooldown) {
-          onGestureDetected?.(detectedPose);
-          
-          if (!showAnswer) {
-            if (detectedPose === 'index_extended' && setShowHint) {
-              startCooldown(detectedPose);
-            } else if (detectedPose === 'index_middle_extended' && handleShowAnswer) {
-              handleShowAnswer();
-              startCooldown(detectedPose);
-            }
-          } else if (handleRateCard) {
-            switch (detectedPose) {
-              case 'thumbs_up':
-
-                startCooldown(detectedPose);
-                handleRateCard('Easy');
-                break;
-              case 'flat_hand':
-                handleRateCard('Hard');
-                startCooldown(detectedPose);
-                break;
-              case 'thumbs_down':
-                handleRateCard('Wrong');
-                startCooldown(detectedPose);
-                break;
-              default:
-                break;
-            }
-          }
-        }
-        
-        // Draw hand visualization
-        drawHand(ctx, landmarks);
-      } else {
-        setHandPose(null);
-        // Clear canvas when no hand is detected
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        if (videoRef.current) {
-          ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-        }
-      }
-
-      animationFrameId = requestAnimationFrame(detectHandPose);
-    };
-
-    const initialize = async () => {
-      await setupCamera();
-      model = await loadHandposeModel();
-      detectHandPose();
-    };
-
-    initialize();
-
-    return () => {
-      if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
-      }
-      if (videoRef.current?.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach(track => track.stop());
-      }
-      if (cooldownRef.current) {
-        clearTimeout(cooldownRef.current);
-      }
-      if (cooldownIntervalRef.current) {
-        clearInterval(cooldownIntervalRef.current);
-      }
-    };
-  }, [onGestureDetected, setShowHint, handleShowAnswer, handleRateCard, showAnswer, showHint, isCooldown]);
 
   return (
     <div className="relative w-[320px] h-[240px] rounded-xl overflow-hidden shadow-lg">
@@ -229,14 +273,26 @@ const HandVisualizer: React.FC<HandVisualizerProps> = ({
         style={{ transform: 'scaleX(-1)' }}
       />
       {handPose && (
-        <div className="absolute top-4 right-4 bg-white bg-opacity-75 px-4 py-2 rounded-lg">
-          <p className="text-lg font-semibold">Detected: {handPose}</p>
-        </div>
-      )}
-      {isCooldown && (
-        <div className="absolute bottom-4 right-4 bg-white bg-opacity-75 px-4 py-2 rounded-lg">
-          <p className="text-lg font-semibold">Cooldown: {cooldownTime}s</p>
-        </div>
+        <>
+          <div className="absolute top-4 right-4 bg-white bg-opacity-75 px-4 py-2 rounded-lg">
+            <p className="text-lg font-semibold">{getGestureAction(handPose)}</p>
+          </div>
+          {isHolding && (
+            <div className="absolute bottom-4 left-4 right-4 bg-white bg-opacity-90 px-4 py-3 rounded-lg shadow-lg">
+              <div className="flex flex-col gap-2">
+                <p className="text-lg font-semibold text-center text-gray-800">
+                  Hold for: {timeLeft}s
+                </p>
+                <div className="w-full h-3 bg-gray-200 rounded-full">
+                  <div
+                    className="h-full bg-green-500 rounded-full transition-all duration-100"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
