@@ -10,33 +10,45 @@ if (window.contentScriptLoaded) {
   icon.className = "popup-icon";
   icon.style.cssText = `
     position: fixed;
+    top: 20px;
+    right: 20px;
     cursor: pointer;
     z-index: 10000;
     background: white;
-    border-radius: 20px;
-    padding: 8px 16px 8px 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    display: none;
-    height: 36px;
+    border-radius: 14px;
+    padding: 6px 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    height: 32px;
     text-align: center;
     pointer-events: auto;
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-family: 'Montserrat', sans-serif;
+    justify-content: center;
+    gap: 5px;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
     font-weight: 500;
-    font-size: 14px;
+    font-size: 13.5px;
     color: #4B4FBA;
+    border: 1px solid rgba(75, 79, 186, 0.1);
+    min-width: fit-content;
+    max-width: max-content;
   `;
 
-  // Add SVG logo
+  // Add SVG logo with wordmark
   const logoSvg = `
-    <svg width="24" height="24" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="10" y="12" width="36" height="44" rx="4" stroke="#4B4FBA" stroke-width="4"/>
-      <rect x="18" y="8" width="36" height="44" rx="4" stroke="#4B4FBA" stroke-width="4"/>
-      <path d="M36 28C36 25.7909 34.2091 24 32 24C29.7909 24 28 25.7909 28 28C28 29.6569 29.0662 31.0709 30.5 31.6528V34H33.5V31.6528C34.9338 31.0709 36 29.6569 36 28Z" fill="#4B4FBA"/>
-    </svg>
+<svg width="20" height="20" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_18_2)">
+<path d="M32 42V44C32 44 32 47 35 47C38 47 38 44 38 44V42M32 42C32 42 31.9994 41 30.9997 40C30 39 28.7562 37.2706 28.0534 36.0407C27.3506 34.8109 26.987 33.4164 26.9997 32C26.9997 28 29.9997 24 34.9997 24C39.9997 24 42.9997 28 42.9997 32C43.0124 33.4164 42.6487 34.8109 41.9459 36.0407C41.2432 37.2706 39.9994 39 38.9997 40C38 41 38 42 38 42M32 42H38" stroke="#4B4FBA" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M23 17H47C49.2091 17 51 18.7909 51 21V49C51 51.2091 49.2091 53 47 53H23C20.7909 53 19 51.2091 19 49V21C19 18.7909 20.7909 17 23 17Z" stroke="#4B4FBA" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M17 47C14.7909 47 13 45.2091 13 43V17C13 14 16 11 19 11H41C43.2091 11 45 12.7909 45 15" stroke="#4B4FBA" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+<defs>
+<clipPath id="clip0_18_2">
+<rect width="64" height="64" fill="white"/>
+</clipPath>
+</defs>
+</svg>
   `;
 
   // Create logo element
@@ -45,20 +57,37 @@ if (window.contentScriptLoaded) {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    margin-bottom: -1px;
   `;
   logoContainer.innerHTML = logoSvg;
 
-  // Create text element
+  // Create text element with wordmark
   const textElement = document.createElement("span");
-  textElement.textContent = "Create Flashcard";
+  textElement.textContent = "Flashcard";
+  textElement.style.cssText = `
+    font-size: 13.5px;
+    white-space: nowrap;
+    letter-spacing: -0.1px;
+    line-height: 1;
+    margin-top: 1px;
+    font-weight: 600;
+    color: #4B4FBA;
+  `;
 
   // Add elements to icon container
   icon.appendChild(logoContainer);
   icon.appendChild(textElement);
 
   document.body.appendChild(icon);
+
+  // Add click event listener to the icon
+  icon.addEventListener('click', () => {
+    const selectedText = window.getSelection().toString().trim();
+    showPopup(selectedText);
+  });
 
   // Create popup window
   const popup = document.createElement("div");
@@ -154,7 +183,92 @@ if (window.contentScriptLoaded) {
     popup.style.display = "block";
   }
 
+  async function handleLogout() {
+    try {
+      const idToken = localStorage.getItem('idToken');
+      if (!idToken) {
+        console.log('No token found, already logged out');
+        return;
+      }
+
+      const response = await fetch('http://localhost:3000/auth/logout', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${idToken}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Logout failed');
+      }
+
+      // Clear stored credentials
+      localStorage.removeItem('idToken');
+      localStorage.removeItem('username');
+      
+      console.log('Successfully logged out');
+    } catch (error) {
+      console.error('Error during logout:', error);
+      // Still clear local storage even if server logout fails
+      localStorage.removeItem('idToken');
+      localStorage.removeItem('username');
+    }
+  }
+
   function showLoginPopup(cardName, cardDescription, cardHint) {
+    // Check if user is already logged in
+    const idToken = localStorage.getItem('idToken');
+    const savedUsername = localStorage.getItem('username');
+
+    if (idToken && savedUsername) {
+      // User is logged in, show save card interface
+      popup.innerHTML = `
+        <div style="font-family: 'Montserrat', sans-serif; padding: 15px;">
+          <h2 style="font-size: 24px; font-weight: 700; color: rgba(0, 0, 0, 0.87); margin-bottom: 16px; text-align: center; line-height: 30px;">Save Card</h2>
+          
+          <div style="margin-bottom: 20px;">
+            <div style="margin-bottom: 8px;">
+              <label style="display: block; margin-bottom: 4px; color: #374151; font-weight: 500;">Front:</label>
+              <div style="padding: 8px; background: #f3f4f6; border-radius: 4px; color: #1f2937;">${cardName}</div>
+            </div>
+            <div style="margin-bottom: 8px;">
+              <label style="display: block; margin-bottom: 4px; color: #374151; font-weight: 500;">Back:</label>
+              <div style="padding: 8px; background: #f3f4f6; border-radius: 4px; color: #1f2937;">${cardDescription}</div>
+            </div>
+            ${cardHint ? `
+              <div style="margin-bottom: 8px;">
+                <label style="display: block; margin-bottom: 4px; color: #374151; font-weight: 500;">Hint:</label>
+                <div style="padding: 8px; background: #f3f4f6; border-radius: 4px; color: #1f2937;">${cardHint}</div>
+              </div>
+            ` : ''}
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button id="saveCard" style="flex: 1; padding: 10px 16px; background-color: #4b4fba; color: white; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: 500; font-family: 'Montserrat', sans-serif; transition: background-color 0.2s ease;">Save Card</button>
+            <button id="logoutButton" style="flex: 1; padding: 10px 16px; background-color: #374151; color: white; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: 500; font-family: 'Montserrat', sans-serif; transition: background-color 0.2s ease;">Logout</button>
+          </div>
+        </div>
+      `;
+
+      document.getElementById("saveCard").onclick = async function (e) {
+        e.stopPropagation();
+        try {
+          await saveCard(cardName, cardDescription, cardHint, idToken);
+        } catch (error) {
+          console.error('Error saving card:', error);
+        }
+      };
+
+      document.getElementById("logoutButton").onclick = async function (e) {
+        e.stopPropagation();
+        await handleLogout();
+        showLoginPopup(cardName, cardDescription, cardHint);
+      };
+
+      popup.style.display = "block";
+      return;
+    }
+
     popup.innerHTML = `
       <div style="font-family: 'Montserrat', sans-serif; padding: 15px;">
         <h2 style="font-size: 24px; font-weight: 700; color: rgba(0, 0, 0, 0.87); margin-bottom: 16px; text-align: center; line-height: 30px;">Sign in to save your card</h2>
@@ -162,7 +276,7 @@ if (window.contentScriptLoaded) {
         <div style="display: flex; flex-direction: column; gap: 16px;">
           <div>
             <label style="margin-bottom: 6px; color: #374151; font-size: 14px; font-weight: 500; display: block;">Username</label>
-            <input id="username" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #e5e7eb; font-size: 14px; color: #1f2937; font-family: 'Montserrat', sans-serif;" type="text" placeholder="Enter your username">
+            <input id="username" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #e5e7eb; font-size: 14px; color: #1f2937; font-family: 'Montserrat', sans-serif;" type="text" placeholder="Enter your username" value="${savedUsername || ''}">
           </div>
 
           <div>
@@ -206,23 +320,19 @@ if (window.contentScriptLoaded) {
 
     signupLink.onclick = function (e) {
       e.preventDefault();
-
       isSignUpMode = !isSignUpMode;
-
       if (isSignUpMode) {
-        // Switch to sign up mode
         repeatPasswordGroup.style.display = "block";
         signInButton.textContent = "Sign Up";
         signupLink.textContent = "Sign In";
       } else {
-        // Switch to sign in mode
         repeatPasswordGroup.style.display = "none";
         signInButton.textContent = "Sign In";
         signupLink.textContent = "Sign Up";
       }
     };
 
-    signInButton.onclick = function (e) {
+    signInButton.onclick = async function (e) {
       e.stopPropagation();
       const username = document.getElementById("username").value;
       const password = document.getElementById("password").value;
@@ -232,39 +342,124 @@ if (window.contentScriptLoaded) {
         return;
       }
 
-      if (isSignUpMode) {
-        const repeatPassword = document.getElementById("repeatPassword").value;
+      try {
+        let response;
+        if (isSignUpMode) {
+          const repeatPassword = document.getElementById("repeatPassword").value;
+          if (password !== repeatPassword) {
+            alert("Passwords do not match");
+            return;
+          }
 
-        if (password !== repeatPassword) {
-          alert("Passwords do not match");
-          return;
+          response = await fetch('http://localhost:3000/auth/register', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: username,
+              password: password,
+              confirmPassword: repeatPassword
+            })
+          });
+        } else {
+          response = await fetch('http://localhost:3000/auth/login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: username,
+              password: password
+            })
+          });
         }
 
-        // Handle sign up logic
-        console.log("Signing up and saving card:", {
-          name: cardName,
-          description: cardDescription,
-          hint: cardHint,
-          user: username,
-        });
+        if (!response.ok) {
+          throw new Error(isSignUpMode ? 'Registration failed' : 'Login failed');
+        }
 
-        alert("Account created and card saved successfully!");
-      } else {
-        // Handle sign in logic
-        console.log("Signing in and saving card:", {
-          name: cardName,
-          description: cardDescription,
-          hint: cardHint,
-          user: username,
-        });
+        const data = await response.json();
+        
+        // Save login info
+        localStorage.setItem('idToken', data.idToken);
+        localStorage.setItem('username', username);
 
-        alert("Card saved successfully!");
+        // Save the card
+        await saveCard(cardName, cardDescription, cardHint, data.idToken);
+        
+        alert(isSignUpMode ? "Account created and card saved successfully!" : "Card saved successfully!");
+        popup.style.display = "none";
+      } catch (error) {
+        console.error('Error:', error);
+        alert(error.message);
       }
-
-      popup.style.display = "none";
     };
 
     popup.style.display = "block";
+  }
+
+  async function saveCard(cardName, cardDescription, cardHint, token) {
+    try {
+      if (!cardName || !cardDescription) {
+        throw new Error('Front and back sides are required');
+      }
+
+      const response = await fetch('http://localhost:3000/flashcards', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          front: cardName,
+          back: cardDescription,
+          hint: cardHint || '',
+          tags: []
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to save card');
+      }
+
+      const data = await response.json();
+      console.log('Card saved successfully:', data);
+      
+      // Show success message
+      popup.innerHTML = `
+        <div style="font-family: 'Montserrat', sans-serif; padding: 15px; text-align: center;">
+          <h2 style="font-size: 24px; font-weight: 700; color: #4b4fba; margin-bottom: 16px;">Card Saved Successfully!</h2>
+          <p style="color: #374151; margin-bottom: 20px;">Your flashcard has been saved to your collection.</p>
+          <button id="closePopup" style="padding: 10px 16px; background-color: #4b4fba; color: white; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: 500; font-family: 'Montserrat', sans-serif; transition: background-color 0.2s ease;">Close</button>
+        </div>
+      `;
+
+      document.getElementById("closePopup").onclick = function (e) {
+        e.stopPropagation();
+        popup.style.display = "none";
+      };
+
+      return data;
+    } catch (error) {
+      console.error('Error saving card:', error);
+      // Show error message
+      popup.innerHTML = `
+        <div style="font-family: 'Montserrat', sans-serif; padding: 15px; text-align: center;">
+          <h2 style="font-size: 24px; font-weight: 700; color: #dc2626; margin-bottom: 16px;">Error Saving Card</h2>
+          <p style="color: #374151; margin-bottom: 20px;">${error.message}</p>
+          <button id="closePopup" style="padding: 10px 16px; background-color: #dc2626; color: white; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: 500; font-family: 'Montserrat', sans-serif; transition: background-color 0.2s ease;">Close</button>
+        </div>
+      `;
+
+      document.getElementById("closePopup").onclick = function (e) {
+        e.stopPropagation();
+        popup.style.display = "none";
+      };
+
+      throw error;
+    }
   }
 
   icon.onclick = function (e) {

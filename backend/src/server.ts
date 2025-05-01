@@ -1,5 +1,6 @@
 import 'dotenv/config'
 import Fastify from 'fastify'
+import cors from '@fastify/cors'
 
 import firebaseAdmin      from './plugins/firebaseAdmin'
 import firestorePlugin    from './plugins/firestore'
@@ -9,6 +10,14 @@ import flashcardRoutes    from './routes/flashcards'
 import userRoutes         from './routes/user'
 
 const app = Fastify({ logger: true })
+
+// Register CORS plugin
+app.register(cors, {
+  origin: true, // Allow all origins
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+})
 
 app.register(firebaseAdmin)
 app.register(firestorePlugin)

@@ -10,6 +10,8 @@ interface HandVisualizerProps {
   showAnswer?: boolean;
   showHint?: boolean;
   holdTimeMs?: number;
+  onNextDay?: () => void;
+  showComplete?: boolean;
 }
 
 const HandVisualizer: React.FC<HandVisualizerProps> = ({
@@ -19,7 +21,9 @@ const HandVisualizer: React.FC<HandVisualizerProps> = ({
   handleRateCard,
   showAnswer,
   showHint,
-  holdTimeMs = 3000 // Default to 3 seconds if not provided
+  holdTimeMs = 3000,
+  onNextDay,
+  showComplete
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
