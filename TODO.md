@@ -2,10 +2,7 @@
 
 ## Backend
 
-_(a backward-looking “DONE” list to capture what the backend **already** delivers)_
-
-The items below document every major capability, pattern, and safeguard that is present in the current codebase.  
-Use it as a baseline for changelogs, onboarding, or bragging rights.
+The items below document every major capability, pattern, and safeguard that is present in the current codebase.
 
 ---
 
