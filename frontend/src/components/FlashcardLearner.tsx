@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Header from './Header';
 import Flashcard from './Flashcard';
 import ActionButtons from './ActionButtons';
@@ -83,7 +83,7 @@ const FlashcardLearner: React.FC<FlashcardLearnerProps> = ({ user, onLogout }) =
   };
 
   return (
-    <div className="flex flex-col items-center w-screen bg-gray-50 min-h-screen">
+    <div className="flex flex-col items-center w-screen bg-gray-50 min-h-screen overflow-x-hidden">
       <Header
         currentDay={currentDay}
         currentCard={currentCard}
@@ -92,9 +92,15 @@ const FlashcardLearner: React.FC<FlashcardLearnerProps> = ({ user, onLogout }) =
         onLogout={onLogout}
       />
 
-      <div className="flex flex-col gap-8 items-center px-4 py-8 mx-auto w-full max-w-[950px]">
-        <div className="absolute top-12.5 right-4 z-50 rounded-md max-w-[250px]">
-          <HandVisualizer />
+      <div className="flex flex-col gap-8 items-center px-4 py-8 mx-auto w-full max-w-[950px] relative">
+        <div className="fixed top-20 right-4 z-50">
+          <HandVisualizer
+            setShowHint={setShowHint}
+            handleShowAnswer={handleShowAnswer}
+            handleRateCard={handleRateCard}
+            showAnswer={showAnswer}
+            showHint={showHint}
+          />
         </div>
         {!showComplete ? (
           <>
