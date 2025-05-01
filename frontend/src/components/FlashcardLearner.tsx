@@ -93,7 +93,7 @@ const FlashcardLearner: React.FC<FlashcardLearnerProps> = ({ user, onLogout }) =
       />
 
       <div className="flex flex-col gap-8 items-center px-4 py-8 mx-auto w-full max-w-[950px]">
-        <div className="w-full">
+        <div className="absolute top-12.5 right-4 z-50 rounded-md max-w-[250px]">
           <HandVisualizer />
         </div>
         {!showComplete ? (
