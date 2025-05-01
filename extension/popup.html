@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flashcard Creator</title>
+    <link rel="stylesheet" href="popup.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <main class="card-form-container">
+      <!-- Message for users who haven't selected text -->
+      <section id="noSelectionMessage" class="message-section">
+        <div class="message-icon">📝</div>
+        <h2 class="message-title">Create Flashcards</h2>
+        <p class="message-text">
+          Select text on any webpage and click the flashcard icon to create a
+          new card.
+        </p>
+        <div class="selection-steps">
+          <div class="step">
+            <div class="step-number">1</div>
+            <div class="step-text">Select text on any webpage</div>
+          </div>
+          <div class="step">
+            <div class="step-number">2</div>
+            <div class="step-text">Click the 🔍 icon that appears</div>
+          </div>
+          <div class="step">
+            <div class="step-number">3</div>
+            <div class="step-text">Fill in the card details and save</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Card creation form (shown when text is selected) -->
+      <section id="cardForm" class="hidden">
+        <h1 class="form-title">Create New Card</h1>
+
+        <div class="form-group">
+          <label for="cardName" class="form-label">Card Front Side:</label>
+          <input
+            id="cardName"
+            class="form-input"
+            placeholder="Enter front side of card"
+            type="text"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="cardDescription" class="form-label"
+            >Card Back Side:</label
+          >
+          <textarea
+            id="cardDescription"
+            class="form-textarea"
+            placeholder="Enter backside of card"
+          ></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="cardHint" class="form-label">Card Hint:</label>
+          <input
+            id="cardHint"
+            class="form-input-hint"
+            placeholder="Enter card hint"
+            type="text"
+          />
+        </div>
+
+        <div class="form-actions">
+          <button type="button" id="saveButton" class="btn-save">
+            Save Card
+          </button>
+          <button type="button" id="closeButton" class="btn-close">
+            Close
+          </button>
+        </div>
+      </section>
+
+      <!-- Login/Signup section -->
+      <section id="loginSection" class="login-section hidden">
+        <h2 class="login-title">Sign in to save your cards</h2>
+        <div class="login-form">
+          <div class="login-group">
+            <label for="username" class="login-label">Username</label>
+            <input
+              id="username"
+              class="login-input"
+              type="text"
+              placeholder="Enter your username"
+            />
+          </div>
+          <div class="login-group">
+            <label for="password" class="login-label">Password</label>
+            <input
+              id="password"
+              class="login-input"
+              type="password"
+              placeholder="Enter your password"
+            />
+          </div>
+          <div id="repeatPasswordGroup" class="login-group hidden">
+            <label for="repeatPassword" class="login-label"
+              >Repeat Password</label
+            >
+            <input
+              id="repeatPassword"
+              class="login-input"
+              type="password"
+              placeholder="Repeat your password"
+            />
+          </div>
+          <button id="signInButton" class="btn-signin">Sign In</button>
+          <div class="signup-prompt">
+            <span>Don't have an account?</span>
+            <a href="#" id="signupLink" class="signup-link"> Sign Up </a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
